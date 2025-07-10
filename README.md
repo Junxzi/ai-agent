@@ -46,6 +46,16 @@ jun-discord-ai-agent/
 ```
 ---
 
+## Discord Bot Setup
+
+1. Open the [Discord Developer Portal](https://discord.com/developers/applications) and create a new **Application**.
+2. Add a **Bot** to the application and copy the **token**.
+3. Enable the **Message Content Intent** so the bot can read DM text.
+4. Paste the token into `.env` as `DISCORD_TOKEN=`.
+5. Invite the bot via the OAuth2 URL shown in the portal.
+
+---
+
 ## Quick Start
 
 1. Install dependencies
