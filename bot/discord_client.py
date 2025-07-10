@@ -45,7 +45,7 @@ class JunBot(discord.Client):
         self.reminder_add_patterns: List[re.Pattern[str]] = [
             re.compile(r"明日(\d{1,2})時(?:([0-9]{1,2})分?)?に(.+?)を?リマインド"),
             re.compile(
-                r"remind me (?:tomorrow )?at (\d{1,2})(?::(\d{2}))?\s*(am|pm)? to (.+)",
+                r"remind me (?:(tomorrow) )?at (\d{1,2})(?::(\d{2}))?\s*(am|pm)? to (.+)",
                 re.IGNORECASE,
             ),
         ]
@@ -72,16 +72,17 @@ class JunBot(discord.Client):
                 message = m.group(3).strip()
                 remind_date = now.date() + datetime.timedelta(days=1)
             else:
-                hour = int(m.group(1))
-                minute = int(m.group(2) or 0)
-                ampm = m.group(3)
+                tomorrow = m.group(1)
+                hour = int(m.group(2))
+                minute = int(m.group(3) or 0)
+                ampm = m.group(4)
                 if ampm:
                     if ampm.lower() == "pm" and hour < 12:
                         hour += 12
                     if ampm.lower() == "am" and hour == 12:
                         hour = 0
-                message = m.group(4).strip()
-                remind_date = now.date() + datetime.timedelta(days=1) if "tomorrow" in pat.pattern else now.date()
+                message = m.group(5).strip()
+                remind_date = now.date() + datetime.timedelta(days=1) if tomorrow else now.date()
             remind_at = datetime.datetime.combine(
                 remind_date,
                 datetime.time(hour, minute, tzinfo=self.tz),
