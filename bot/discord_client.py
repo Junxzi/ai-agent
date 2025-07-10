@@ -33,6 +33,10 @@ class JunBot(discord.Client):
             re.compile(r"(.+?)を?ToDoに追加"),
             re.compile(r"ToDoに(.+?)を追加"),
         ]
+        # Pattern to detect simple schedule entry like "10/5 15:00に会議"
+        self.event_add_pattern = re.compile(
+            r"(\d{1,2})/(\d{1,2})\s*(\d{1,2}:\d{2})?に(.+)"
+        )
 
     def _parse_todo_add(self, text: str) -> str | None:
         for pat in self.todo_add_patterns:
@@ -40,6 +44,19 @@ class JunBot(discord.Client):
             if m:
                 return m.group(1).strip()
         return None
+
+    def _parse_event_add(self, text: str) -> tuple[str, str] | None:
+        m = self.event_add_pattern.search(text)
+        if not m:
+            return None
+        month = int(m.group(1))
+        day = int(m.group(2))
+        time_part = m.group(3) or "00:00"
+        title = m.group(4).strip()
+        hour, minute = map(int, time_part.split(":"))
+        year = datetime.datetime.now().year
+        dt = datetime.datetime(year, month, day, hour, minute)
+        return title, dt.isoformat()
 
     async def on_ready(self):
         logging.getLogger(__name__).info("Logged in as %s", self.user)
@@ -62,7 +79,13 @@ class JunBot(discord.Client):
                 task_id = self.todos.add_task(todo_desc)
                 await message.channel.send(f"Added task #{task_id}")
             else:
-                await self.handle_chat(message)
+                event = self._parse_event_add(message.content)
+                if event:
+                    title, start_time = event
+                    event_id = self.schedule.add_event(title, start_time)
+                    await message.channel.send(f"Added event #{event_id}")
+                else:
+                    await self.handle_chat(message)
 
     async def handle_chat(self, message: discord.Message):
         """Generate a reply using ChatGPT and send it back to the user."""
