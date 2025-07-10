@@ -35,6 +35,12 @@ class JunBot(discord.Client):
             re.compile(r"(.+?)を?ToDoに追加"),
             re.compile(r"ToDoに(.+?)を追加"),
         ]
+        # Patterns for natural language "show todo list" requests
+        self.todo_list_patterns: List[re.Pattern[str]] = [
+            re.compile(r"show (?:my )?(?:todo|task) list", re.IGNORECASE),
+            re.compile(r"ToDoリスト.*(見せて|表示)"),
+            re.compile(r"ToDo一覧"),
+        ]
         # Simple patterns for reminder requests (e.g. "明日9時に○○をリマインド")
         self.reminder_add_patterns: List[re.Pattern[str]] = [
             re.compile(r"明日(\d{1,2})時(?:([0-9]{1,2})分?)?に(.+?)を?リマインド"),
@@ -50,6 +56,9 @@ class JunBot(discord.Client):
             if m:
                 return m.group(1).strip()
         return None
+
+    def _is_todo_list_request(self, text: str) -> bool:
+        return any(p.search(text) for p in self.todo_list_patterns)
 
     def _parse_reminder_add(self, text: str) -> Tuple[str, str] | None:
         now = datetime.datetime.now(self.tz)
@@ -96,6 +105,9 @@ class JunBot(discord.Client):
         if message.content.startswith("/todo"):
             await self.handle_todo_command(message)
         else:
+            if self._is_todo_list_request(message.content):
+                await self._send_todo_list(message.channel)
+                return
             todo_desc = self._parse_todo_add(message.content)
             if todo_desc:
                 task_id = self.todos.add_task(todo_desc)
@@ -137,6 +149,17 @@ class JunBot(discord.Client):
             await message.channel.send("Deleted")
         else:
             await message.channel.send("Invalid /todo command")
+
+    async def _send_todo_list(self, channel: discord.abc.Messageable):
+        tasks = self.todos.list_pending_tasks()
+        if not tasks:
+            await channel.send("(no pending tasks)")
+            return
+        lines = []
+        for tid, desc, due in tasks:
+            due_str = f" (due {due})" if due else ""
+            lines.append(f"{tid}: {desc}{due_str}")
+        await channel.send("\n".join(lines))
 
     async def _reminder_loop(self):
         await self.wait_until_ready()

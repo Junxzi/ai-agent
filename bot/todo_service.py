@@ -21,6 +21,12 @@ class TodoService:
             "SELECT id, description, due_date, completed FROM tasks ORDER BY id"
         )
 
+    def list_pending_tasks(self) -> List[Tuple[int, str, str]]:
+        """Return only incomplete tasks."""
+        return self.store.fetchall(
+            "SELECT id, description, due_date FROM tasks WHERE completed = 0 ORDER BY id"
+        )
+
     def complete_task(self, task_id: int) -> None:
         self.store.execute(
             "UPDATE tasks SET completed = 1 WHERE id = ?",
