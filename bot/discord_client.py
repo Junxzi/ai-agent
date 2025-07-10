@@ -5,6 +5,7 @@ import datetime
 import logging
 import re
 from typing import Any, Dict, List
+from zoneinfo import ZoneInfo
 
 import discord
 
@@ -33,6 +34,11 @@ class JunBot(discord.Client):
             re.compile(r"(.+?)を?ToDoに追加"),
             re.compile(r"ToDoに(.+?)を追加"),
         ]
+        # Pattern to detect simple schedule entry like "10/5 15:00に会議"
+        self.event_add_pattern = re.compile(
+            r"(?P<month>\d{1,2})/(?P<day>\d{1,2})\s+"
+            r"(?P<hour>\d{1,2}):(?P<minute>\d{2})(?:に)?\s*(?P<title>.+)"
+        )
 
     def _parse_todo_add(self, text: str) -> str | None:
         for pat in self.todo_add_patterns:
@@ -40,6 +46,24 @@ class JunBot(discord.Client):
             if m:
                 return m.group(1).strip()
         return None
+
+    def _parse_event_add(self, text: str) -> tuple[str, str] | None:
+        m = self.event_add_pattern.search(text)
+        if not m:
+            return None
+        try:
+            month = int(m.group("month"))
+            day = int(m.group("day"))
+            hour = int(m.group("hour"))
+            minute = int(m.group("minute"))
+            title = m.group("title").strip()
+            year = datetime.datetime.now().year
+            tzname = self.config.get("timezone", "UTC")
+            tz = ZoneInfo(tzname)
+            dt = datetime.datetime(year, month, day, hour, minute, tzinfo=tz)
+            return title, dt.isoformat()
+        except Exception:
+            return None
 
     async def on_ready(self):
         logging.getLogger(__name__).info("Logged in as %s", self.user)
@@ -61,6 +85,14 @@ class JunBot(discord.Client):
             if todo_desc:
                 task_id = self.todos.add_task(todo_desc)
                 await message.channel.send(f"Added task #{task_id}")
+                return
+            event = self._parse_event_add(message.content)
+            if event:
+                title, start_time = event
+                event_id = self.schedule.add_event(title, start_time)
+                await message.channel.send(
+                    f"Added event #{event_id}: {title} at {start_time}"
+                )
             else:
                 await self.handle_chat(message)
 
