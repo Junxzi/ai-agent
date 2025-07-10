@@ -75,3 +75,24 @@ A sample `systemd` service file is provided so the bot can run continuously on a
 
 The bot is composed of a Discord-facing client, an LLM interface and a set of service modules for ToDo, reminders and schedule management. Data persistence is handled through a single SQLite database accessed via `data_store.py`. Configuration and secrets are externalized in `config.yaml` and `.env`. This modular architecture keeps responsibilities clear and makes future extensions—such as additional services or improved scheduling—straightforward.
 
+## Conversation Flow and Command Routing
+
+User messages arrive as plain text via Discord. They are first inspected for a
+leading slash command such as `/todo list`. If present, the bot directly calls
+the corresponding service without involving the LLM.
+
+For normal sentences, the text is sent to ChatGPT along with a list of
+available functions. The model either returns an answer (for general Q&A) or
+invokes one of the functions below:
+
+1. **ToDo operations** – phrases containing verbs like "add", "complete" or
+   "delete" together with "todo"/"task" route to `todo_service`.
+2. **Reminders** – expressions such as "remind me" or "set a reminder" cause a
+   call to `reminder_service` after ChatGPT extracts the time and message.
+3. **Schedule management** – mentions of "schedule", "meeting" or "appointment"
+   use `schedule_service` to store or list events.
+
+If ChatGPT returns plain text with no function call, the bot replies directly
+with that answer. This hybrid strategy allows free‑form conversation while
+still supporting explicit commands when needed.
+
