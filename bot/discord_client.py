@@ -30,10 +30,15 @@ class JunBot(discord.Client):
         logging.getLogger(__name__).info("Logged in as %s", self.user)
 
     async def on_message(self, message: discord.Message):
+        # Only handle direct messages from the allowed user
         if message.author.id != self.allowed_user_id:
             return
         if message.author == self.user:
             return
+        # Ignore messages that are not DMs (e.g. guild channels)
+        if message.guild is not None:
+            return
+
         if message.content.startswith("/todo"):
             await self.handle_todo_command(message)
         else:
