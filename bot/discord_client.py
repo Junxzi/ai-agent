@@ -3,7 +3,8 @@ from __future__ import annotations
 import asyncio
 import datetime
 import logging
-from typing import Any, Dict
+import re
+from typing import Any, Dict, List
 
 import discord
 
@@ -26,6 +27,19 @@ class JunBot(discord.Client):
         self.reminders = ReminderService(store)
         self.schedule = ScheduleService(store)
         self.bg_task = self.loop.create_task(self._reminder_loop())
+        # Patterns to detect natural language "add to todo" commands
+        self.todo_add_patterns: List[re.Pattern[str]] = [
+            re.compile(r"add (.+?) to(?: my)? todo", re.IGNORECASE),
+            re.compile(r"(.+?)を?ToDoに追加"),
+            re.compile(r"ToDoに(.+?)を追加"),
+        ]
+
+    def _parse_todo_add(self, text: str) -> str | None:
+        for pat in self.todo_add_patterns:
+            m = pat.search(text)
+            if m:
+                return m.group(1).strip()
+        return None
 
     async def on_ready(self):
         logging.getLogger(__name__).info("Logged in as %s", self.user)
@@ -43,7 +57,12 @@ class JunBot(discord.Client):
         if message.content.startswith("/todo"):
             await self.handle_todo_command(message)
         else:
-            await self.handle_chat(message)
+            todo_desc = self._parse_todo_add(message.content)
+            if todo_desc:
+                task_id = self.todos.add_task(todo_desc)
+                await message.channel.send(f"Added task #{task_id}")
+            else:
+                await self.handle_chat(message)
 
     async def handle_chat(self, message: discord.Message):
         """Generate a reply using ChatGPT and send it back to the user."""
