@@ -1,0 +1,16 @@
+[Unit]
+Description=Jun Personal AI Assistant Discord Bot
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/jun/jun_personal_ai_bot
+ExecStart=/usr/bin/python3 /home/jun/jun_personal_ai_bot/main.py
+Restart=always
+User=jun
+Environment="PYTHONUNBUFFERED=1"
+# EnvironmentFile=-/home/jun/jun_personal_ai_bot/.env
+
+[Install]
+WantedBy=multi-user.target
+
