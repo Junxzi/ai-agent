@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import logging
 from typing import Any, Dict
 
 import discord
@@ -26,7 +27,7 @@ class JunBot(discord.Client):
         self.bg_task = self.loop.create_task(self._reminder_loop())
 
     async def on_ready(self):
-        print(f"Logged in as {self.user}")
+        logging.getLogger(__name__).info("Logged in as %s", self.user)
 
     async def on_message(self, message: discord.Message):
         if message.author.id != self.allowed_user_id:
