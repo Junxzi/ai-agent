@@ -8,6 +8,7 @@ from typing import Any, Dict
 import discord
 
 from .llm_client import LLMClient
+from openai_client import ask_chatgpt
 from .todo_service import TodoService
 from .reminder_service import ReminderService
 from .schedule_service import ScheduleService
@@ -45,9 +46,9 @@ class JunBot(discord.Client):
             await self.handle_chat(message)
 
     async def handle_chat(self, message: discord.Message):
-        msg = {"role": "user", "content": message.content}
-        response = self.llm.chat([msg])
-        await message.channel.send(response.get("message", {}).get("content", ""))
+        """Generate a reply using ChatGPT and send it back to the user."""
+        answer = ask_chatgpt(message.content)
+        await message.channel.send(answer)
 
     async def handle_todo_command(self, message: discord.Message):
         parts = message.content.split(maxsplit=2)
